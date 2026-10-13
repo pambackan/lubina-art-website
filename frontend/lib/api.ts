@@ -1,3 +1,0 @@
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/$/, '');
-export type Artwork = { id:number; slug:string; titleEn:string; titleDe:string; descriptionEn?:string; descriptionDe?:string; category:string; medium?:string; size?:string; year?:number; price?:string|number|null; currency?:string; imageUrl:string; status:'AVAILABLE'|'SOLD'|'COMING_SOON'; featured:boolean };
-export async function getArtworks(): Promise<Artwork[]> { try { const res=await fetch(`${API_URL}/artworks`,{next:{revalidate:60}}); if(!res.ok)return []; const data=await res.json(); return data.artworks||[]; } catch { return []; } }
