@@ -1,0 +1,20 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { sequelize } from './config/database.js';
+import './models/index.js';
+import authRoutes from './routes/auth.js';
+import artworkRoutes from './routes/artworks.js';
+import commissionRoutes from './routes/commissions.js';
+import uploadRoutes from './routes/uploads.js';
+const app=express();const here=path.dirname(fileURLToPath(import.meta.url));
+app.use(helmet({crossOriginResourcePolicy:{policy:'cross-origin'}}));app.use(cors({origin:(process.env.FRONTEND_URL||'http://localhost:3000').split(',').map(x=>x.trim()),credentials:true}));app.use(express.json({limit:'1mb'}));app.use('/uploads',express.static(path.resolve(process.cwd(),process.env.UPLOAD_DIR||'uploads')));
+app.use('/api/',rateLimit({windowMs:15*60*1000,limit:300,standardHeaders:true,legacyHeaders:false}));
+app.get('/api/health',(_req,res)=>res.json({status:'ok',service:'lubina-art-api'}));app.use('/api/auth',authRoutes);app.use('/api/artworks',artworkRoutes);app.use('/api/commissions',commissionRoutes);app.use('/api/uploads',uploadRoutes);
+app.use((err,_req,res,_next)=>{console.error(err);if(err.name==='SequelizeUniqueConstraintError')return res.status(409).json({message:'That slug or email is already in use.'});if(err.name?.startsWith('Sequelize'))return res.status(400).json({message:err.errors?.[0]?.message||'Please check the submitted data.'});res.status(500).json({message:'Something went wrong. Please try again.'})});
+const port=Number(process.env.PORT||4000);
+try{await sequelize.authenticate();if(process.env.NODE_ENV!=='production')await sequelize.sync();app.listen(port,()=>console.log(`Lubina API listening on ${port}`));}catch(err){console.error('Database connection failed:',err.message);process.exit(1)}

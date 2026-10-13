@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { Op } from 'sequelize';
+import { Artwork } from '../models/index.js';
+import { requireAdmin } from '../middleware/auth.js';
+const router = Router();
+router.get('/', async (req,res,next)=>{try{const where={}; if(req.query.category)where.category=req.query.category; if(req.query.status)where.status=req.query.status; if(req.query.featured==='true')where.featured=true; if(req.query.q)where[Op.or]=[{titleEn:{[Op.like]:`%${req.query.q}%`}},{titleDe:{[Op.like]:`%${req.query.q}%`}}]; const items=await Artwork.findAll({where,order:[['sortOrder','ASC'],['createdAt','DESC']]});res.json({artworks:items})}catch(e){next(e)}});
+router.get('/:id', async(req,res,next)=>{try{const item=await Artwork.findByPk(req.params.id);if(!item)return res.status(404).json({message:'Artwork not found.'});res.json({artwork:item})}catch(e){next(e)}});
+router.post('/', requireAdmin, async(req,res,next)=>{try{const item=await Artwork.create(req.body);res.status(201).json({artwork:item})}catch(e){next(e)}});
+router.put('/:id', requireAdmin, async(req,res,next)=>{try{const item=await Artwork.findByPk(req.params.id);if(!item)return res.status(404).json({message:'Artwork not found.'});await item.update(req.body);res.json({artwork:item})}catch(e){next(e)}});
+router.delete('/:id', requireAdmin, async(req,res,next)=>{try{const item=await Artwork.findByPk(req.params.id);if(!item)return res.status(404).json({message:'Artwork not found.'});await item.destroy();res.status(204).end()}catch(e){next(e)}});
+export default router;
